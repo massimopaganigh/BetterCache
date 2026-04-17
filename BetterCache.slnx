@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="BetterCache/BetterCache.Client/BetterCache.Client.csproj" />
+  <Project Path="BetterCache/BetterCache/BetterCache.csproj" />
+</Solution>
