@@ -1,0 +1,7 @@
+﻿[assembly: SuppressMessage("Style", "IDE0130:La parola chiave namespace non corrisponde alla struttura di cartelle", Justification = "<In sospeso>", Scope = "namespace", Target = "~N:BetterCache")]
+[assembly: SuppressMessage("Spellchecker", "CRRSP08:A misspelled word has been found", Justification = "<In sospeso>", Scope = "type", Target = "~T:BetterCache.PrecompressedStaticFileMiddleware")]
+[assembly: SuppressMessage("Spellchecker", "CRRSP08:A misspelled word has been found", Justification = "<In sospeso>", Scope = "type", Target = "~T:BetterCache.BetterCachePreload")]
+[assembly: SuppressMessage("Spellchecker", "CRRSP08:A misspelled word has been found", Justification = "<In sospeso>", Scope = "member", Target = "~P:BetterCache.BetterCacheOptions.EnablePreloadHints")]
+[assembly: SuppressMessage("Spellchecker", "CRRSP08:A misspelled word has been found", Justification = "<In sospeso>", Scope = "member", Target = "~P:BetterCache.BetterCacheOptions.PreloadAssets")]
+[assembly: SuppressMessage("Spellchecker", "CRRSP08:A misspelled word has been found", Justification = "<In sospeso>", Scope = "member", Target = "~P:BetterCache.BetterCacheOptions.PreloadFrameworkFromBootManifest")]
+[assembly: SuppressMessage("Spellchecker", "CRRSP08:A misspelled word has been found", Justification = "<In sospeso>", Scope = "member", Target = "~P:BetterCache.BetterCacheOptions.ServePrecompressedAssets")]

@@ -1,0 +1,45 @@
+<Project>
+
+  <!--
+    Resolve the task assembly.
+
+    Case 1: the NuGet package — the dll lives next to this .targets file under build\.
+    Case 2: the repo itself (ProjectReference consumer) — fall back to the Tasks project's bin folder,
+            resolved relative to this file, so we don't force the consumer to copy anything.
+
+    We do NOT copy the dll at build time: UsingTask keeps it locked for the lifetime of the MSBuild
+    node, which breaks the next incremental rebuild with MSB3027 "file locked by .NET Host".
+  -->
+  <PropertyGroup>
+    <_BetterCacheTasksInPackage>$(MSBuildThisFileDirectory)BetterCache.Tasks.dll</_BetterCacheTasksInPackage>
+    <_BetterCacheTasksInRepo>$(MSBuildThisFileDirectory)..\..\BetterCache.Extensions.Tasks\bin\$(Configuration)\net8.0\BetterCache.Tasks.dll</_BetterCacheTasksInRepo>
+
+    <BetterCacheTasksAssembly Condition="'$(BetterCacheTasksAssembly)' == '' and Exists('$(_BetterCacheTasksInPackage)')">$(_BetterCacheTasksInPackage)</BetterCacheTasksAssembly>
+    <BetterCacheTasksAssembly Condition="'$(BetterCacheTasksAssembly)' == '' and Exists('$(_BetterCacheTasksInRepo)')">$(_BetterCacheTasksInRepo)</BetterCacheTasksAssembly>
+  </PropertyGroup>
+
+  <!-- TaskHostFactory runs the task in a separate process that exits when the build ends.
+       This releases the dll so later builds can rewrite it. -->
+  <UsingTask TaskName="BetterCache.Tasks.CompressAssets"
+             AssemblyFile="$(BetterCacheTasksAssembly)"
+             TaskFactory="TaskHostFactory"
+             Condition="'$(BetterCacheTasksAssembly)' != '' and Exists('$(BetterCacheTasksAssembly)')" />
+
+  <Target Name="BetterCacheCompressAssets"
+          AfterTargets="Publish"
+          Condition="'$(BetterCacheCompress)' == 'true' and '$(BetterCacheTasksAssembly)' != '' and Exists('$(BetterCacheTasksAssembly)')">
+    <Message Importance="high" Text="[BetterCache] Compressing static assets under $(PublishDir)wwwroot ..." />
+    <CompressAssets RootDirectory="$(PublishDir)wwwroot"
+                    Extensions="$(BetterCacheCompressExtensions)"
+                    MinBytes="$(BetterCacheCompressMinBytes)"
+                    WriteBrotli="true"
+                    WriteGzip="true" />
+  </Target>
+
+  <Target Name="BetterCacheTasksMissingWarning"
+          BeforeTargets="Publish"
+          Condition="'$(BetterCacheCompress)' == 'true' and ('$(BetterCacheTasksAssembly)' == '' or !Exists('$(BetterCacheTasksAssembly)'))">
+    <Warning Text="[BetterCache] Tasks assembly not found (probed: $(_BetterCacheTasksInPackage); $(_BetterCacheTasksInRepo)). Compression skipped — build the BetterCache.Extensions.Tasks project first or install the NuGet package." />
+  </Target>
+
+</Project>

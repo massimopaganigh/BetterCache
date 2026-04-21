@@ -1,0 +1,23 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Opt out of the Blazor Cache Storage API so the browser HTTP cache is the
+         single source of truth — matches .NET 10 default. Override by setting
+         <BetterCacheDisableBootCache>false</BetterCacheDisableBootCache> in your csproj. -->
+    <BetterCacheDisableBootCache Condition="'$(BetterCacheDisableBootCache)' == ''">true</BetterCacheDisableBootCache>
+    <BlazorCacheBootResources Condition="'$(BetterCacheDisableBootCache)' == 'true' and '$(BlazorCacheBootResources)' == ''">false</BlazorCacheBootResources>
+
+    <!-- Compression defaults. Disable with <BetterCacheCompress>false</BetterCacheCompress>. -->
+    <BetterCacheCompress Condition="'$(BetterCacheCompress)' == ''">true</BetterCacheCompress>
+    <BetterCacheCompressExtensions Condition="'$(BetterCacheCompressExtensions)' == ''">.js;.mjs;.css;.wasm;.json</BetterCacheCompressExtensions>
+    <BetterCacheCompressMinBytes Condition="'$(BetterCacheCompressMinBytes)' == ''">1024</BetterCacheCompressMinBytes>
+  </PropertyGroup>
+
+  <!-- Enable fingerprinting of .mjs files (parity with .NET 10). -->
+  <ItemGroup>
+    <StaticWebAssetFingerprintPattern Include="BetterCacheJSModule"
+                                      Pattern="*.mjs"
+                                      Expression="#[.{fingerprint}]!" />
+  </ItemGroup>
+
+</Project>
