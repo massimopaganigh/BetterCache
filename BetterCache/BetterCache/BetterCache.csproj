@@ -8,7 +8,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BetterCache.Client\BetterCache.Client.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.15" />
+    <ProjectReference Include="..\BetterCache.Extensions\BetterCache.Extensions.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.*" />
   </ItemGroup>
+
+  <!-- ProjectReference does not propagate build/*.props|targets the way NuGet does.
+       Import them explicitly so the sample app exercises the same behavior a consumer
+       would get from the published package. -->
+  <Import Project="..\BetterCache.Extensions\build\BetterCache.props" />
+  <Import Project="..\BetterCache.Extensions\build\BetterCache.targets" />
 
 </Project>

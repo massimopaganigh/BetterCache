@@ -1,0 +1,10 @@
+﻿global using Microsoft.AspNetCore.Builder;
+global using Microsoft.AspNetCore.Components;
+global using Microsoft.AspNetCore.Components.Rendering;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.AspNetCore.StaticFiles;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Options;
+global using Microsoft.Extensions.Primitives;
+global using System.Diagnostics.CodeAnalysis;

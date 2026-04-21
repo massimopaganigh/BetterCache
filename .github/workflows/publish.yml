@@ -1,0 +1,52 @@
+name: Publish NuGet (nuget.org + GitHub Packages)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Restore
+        run: dotnet restore BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj
+
+      - name: Build
+        run: dotnet build BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj --configuration Release --no-restore
+
+      - name: Pack
+        run: dotnet pack BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj --configuration Release --no-build --output ./artifacts
+
+      - name: Push to nuget.org
+        run: |
+          dotnet nuget push "./artifacts/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --skip-duplicate
+
+      - name: Add GitHub Packages source
+        run: |
+          dotnet nuget add source \
+            --username massimopaganigh \
+            --password ${{ secrets.GITHUB_TOKEN }} \
+            --store-password-in-clear-text \
+            --name github \
+            "https://nuget.pkg.github.com/massimopaganigh/index.json"
+
+      - name: Push to GitHub Packages
+        run: dotnet nuget push "./artifacts/*.nupkg" --source github --skip-duplicate

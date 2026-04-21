@@ -1,4 +1,6 @@
 <Solution>
   <Project Path="BetterCache/BetterCache.Client/BetterCache.Client.csproj" />
   <Project Path="BetterCache/BetterCache/BetterCache.csproj" />
+  <Project Path="BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj" />
+  <Project Path="BetterCache/BetterCache.Extensions.Tasks/BetterCache.Extensions.Tasks.csproj" />
 </Solution>

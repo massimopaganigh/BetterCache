@@ -428,9 +428,9 @@ FodyWeavers.xsd
 *.msp
 
 # Claude
-.claude/
-.wolf/
-Claude.md
+# .claude/
+# .wolf/
+# Claude.md
 
 # JetBrains Rider
 **/.idea/

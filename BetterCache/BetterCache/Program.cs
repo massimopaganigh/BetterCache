@@ -8,13 +8,17 @@ namespace BetterCache
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
 
+            builder.Services.AddBetterCache(o =>
+            {
+                o.EnablePreloadHints = true;
+                o.PreloadFrameworkFromBootManifest = true;
+            });
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseWebAssemblyDebugging();
@@ -26,6 +30,7 @@ namespace BetterCache
 
             app.UseAntiforgery();
 
+            app.UseBetterCache();
             app.MapStaticAssets();
             app.MapRazorComponents<App>()
                 .AddInteractiveWebAssemblyRenderMode()
