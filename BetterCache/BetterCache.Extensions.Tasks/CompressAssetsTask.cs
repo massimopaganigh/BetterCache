@@ -6,6 +6,8 @@ namespace BetterCache.Tasks
     /// </summary>
     public sealed class CompressAssets : Task
     {
+        private const int IoBufferSize = 256 * 1024;
+
         public override bool Execute()
         {
             if (!Directory.Exists(RootDirectory))
@@ -26,22 +28,16 @@ namespace BetterCache.Tasks
 
             int compressedCount = 0;
             long savedBytes = 0;
-
-            foreach (var file in Directory.EnumerateFiles(RootDirectory, "*", SearchOption.AllDirectories))
+            var files = Directory.EnumerateFiles(RootDirectory, "*", SearchOption.AllDirectories).Select(file => (file, info: new FileInfo(file))).Where(t =>
             {
-                var ext = Path.GetExtension(file);
+                var ext = Path.GetExtension(t.file);
 
-                if (!extensions.Contains(ext))
-                    continue;
+                return extensions.Contains(ext) && !t.file.EndsWith(".br", StringComparison.OrdinalIgnoreCase) && !t.file.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) && t.info.Length >= MinBytes;
+            }).ToList();
 
-                if (file.EndsWith(".br", StringComparison.OrdinalIgnoreCase)
-                    || file.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var info = new FileInfo(file);
-
-                if (info.Length < MinBytes)
-                    continue;
+            System.Threading.Tasks.Parallel.ForEach(files, t =>
+            {
+                var (file, info) = t;
 
                 if (WriteBrotli)
                 {
@@ -50,10 +46,8 @@ namespace BetterCache.Tasks
                     if (IsStale(brPath, info))
                     {
                         CompressFile(file, brPath, stream => new BrotliStream(stream, CompressionLevel.SmallestSize));
-
-                        savedBytes += Math.Max(0, info.Length - new FileInfo(brPath).Length);
-
-                        compressedCount++;
+                        Interlocked.Add(ref savedBytes, Math.Max(0, info.Length - new FileInfo(brPath).Length));
+                        Interlocked.Increment(ref compressedCount);
                     }
                 }
 
@@ -64,7 +58,7 @@ namespace BetterCache.Tasks
                     if (IsStale(gzPath, info))
                         CompressFile(file, gzPath, stream => new GZipStream(stream, CompressionLevel.SmallestSize));
                 }
-            }
+            });
 
             Log.LogMessage(MessageImportance.High, $"[BetterCache] Compressed {compressedCount} files, saved ~{savedBytes / 1024} KB.");
 
@@ -89,7 +83,7 @@ namespace BetterCache.Tasks
             using var output = File.Create(destination);
             using var compressor = wrap(output);
 
-            input.CopyTo(compressor);
+            input.CopyTo(compressor, IoBufferSize);
         }
 
         private static bool IsStale(string outputPath, FileInfo source)
