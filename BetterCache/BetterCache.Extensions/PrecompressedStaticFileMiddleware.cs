@@ -122,7 +122,7 @@ namespace BetterCache
                 if (!hasGzip && header.Contains("gzip", StringComparison.OrdinalIgnoreCase))
                     hasGzip = true;
 
-                if (hasBr)
+                if (hasBr && hasGzip)
                     break;
             }
 

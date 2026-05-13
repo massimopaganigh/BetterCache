@@ -32,21 +32,22 @@ namespace BetterCache.Tasks
             long savedBytes = 0;
 
             var files = Directory.EnumerateFiles(RootDirectory, "*", SearchOption.AllDirectories)
-                .Where(file =>
+                .Select(file => (file, info: new FileInfo(file)))
+                .Where(t =>
                 {
-                    var ext = Path.GetExtension(file);
+                    var ext = Path.GetExtension(t.file);
 
                     return extensions.Contains(ext)
-                        && !file.EndsWith(".br", StringComparison.OrdinalIgnoreCase)
-                        && !file.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)
-                        && new FileInfo(file).Length >= MinBytes;
+                        && !t.file.EndsWith(".br", StringComparison.OrdinalIgnoreCase)
+                        && !t.file.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)
+                        && t.info.Length >= MinBytes;
                 })
                 .ToList();
 
             // #5 — compress files in parallel to utilise all available cores.
-            System.Threading.Tasks.Parallel.ForEach(files, file =>
+            System.Threading.Tasks.Parallel.ForEach(files, t =>
             {
-                var info = new FileInfo(file);
+                var (file, info) = t;
 
                 if (WriteBrotli)
                 {
