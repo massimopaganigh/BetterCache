@@ -4,16 +4,30 @@ namespace BetterCache
     /// Rewrites static asset requests to pre-compressed .br / .gz siblings when the client
     /// supports the encoding and the file exists. Sets Content-Encoding + Vary appropriately.
     /// </summary>
-    public sealed class PrecompressedStaticFileMiddleware(RequestDelegate next, IOptions<BetterCacheOptions> options, IHostEnvironment env)
+    public sealed class PrecompressedStaticFileMiddleware
     {
+        // #4 — static readonly HashSet for O(1) extension lookup.
+        private static readonly HashSet<string> CompressibleExtensions =
+            new(StringComparer.OrdinalIgnoreCase) { ".js", ".mjs", ".css", ".wasm", ".json" };
+
         private readonly FileExtensionContentTypeProvider _mime = new();
-        private readonly BetterCacheOptions _options = options.Value;
+        private readonly RequestDelegate _next;
+        private readonly BetterCacheOptions _options;
+        // #1 — wwwroot path resolved once in the constructor via IWebHostEnvironment.WebRootPath.
+        private readonly string _wwwroot;
+
+        public PrecompressedStaticFileMiddleware(RequestDelegate next, IOptions<BetterCacheOptions> options, IWebHostEnvironment env)
+        {
+            _next = next;
+            _options = options.Value;
+            _wwwroot = env.WebRootPath;
+        }
 
         public async Task InvokeAsync(HttpContext context)
         {
             if (!_options.ServePrecompressedAssets)
             {
-                await next(context);
+                await _next(context);
 
                 return;
             }
@@ -21,7 +35,7 @@ namespace BetterCache
             if (!HttpMethods.IsGet(context.Request.Method)
                 && !HttpMethods.IsHead(context.Request.Method))
             {
-                await next(context);
+                await _next(context);
 
                 return;
             }
@@ -31,7 +45,7 @@ namespace BetterCache
             if (string.IsNullOrEmpty(path)
                 || !IsCompressibleAsset(path))
             {
-                await next(context);
+                await _next(context);
 
                 return;
             }
@@ -41,18 +55,19 @@ namespace BetterCache
 
             if (encoding is null)
             {
-                await next(context);
+                await _next(context);
 
                 return;
             }
 
-            var webRoot = env.ContentRootPath;
-            var wwwroot = Path.Combine(webRoot, "wwwroot");
-            var compressed = Path.Combine(wwwroot, path!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar) + extension);
+            var compressed = Path.Combine(_wwwroot, path!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar) + extension);
 
-            if (!File.Exists(compressed))
+            // #2 — single FileInfo to avoid two filesystem calls.
+            var fi = new FileInfo(compressed);
+
+            if (!fi.Exists)
             {
-                await next(context);
+                await _next(context);
 
                 return;
             }
@@ -64,49 +79,58 @@ namespace BetterCache
 
             context.Response.Headers.Append("Vary", "Accept-Encoding");
 
-            context.Response.ContentLength = new FileInfo(compressed).Length;
+            context.Response.ContentLength = fi.Length;
 
             await context.Response.SendFileAsync(compressed);
         }
 
         #region PRIVATE METHODS
+        // #4 — uses the static HashSet; also avoids the separate IsSatelliteAssembly call for non-.wasm paths.
         private static bool IsCompressibleAsset(string path)
         {
-            if (IsSatelliteAssembly(path))
+            var ext = Path.GetExtension(path.AsSpan());
+
+            if (ext.IsEmpty || !CompressibleExtensions.Contains(ext.ToString()))
                 return false;
 
-            return path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".mjs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+            // Satellite assemblies (.resources.<hash>.wasm) must not be served pre-compressed.
+            if (ext.Equals(".wasm", StringComparison.OrdinalIgnoreCase))
+            {
+                var fileName = Path.GetFileName(path.AsSpan());
+
+                if (fileName.IndexOf(".resources.".AsSpan(), StringComparison.OrdinalIgnoreCase) >= 0)
+                    return false;
+            }
+
+            return true;
         }
 
-        private static bool IsSatelliteAssembly(string path)
-        {
-            if (!path.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            var fileName = Path.GetFileName(path.AsSpan());
-
-            return fileName.IndexOf(".resources.".AsSpan(), StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
+        // #3 — single-pass: collects support for both encodings in one loop, then decides.
         private static (string? Encoding, string Ext) PickEncoding(StringValues accept)
         {
-            foreach (var header in accept)
-            {
-                if (header is null)
-                    continue;
-
-                if (header.Contains("br", StringComparison.OrdinalIgnoreCase))
-                    return ("br", ".br");
-            }
+            bool hasBr = false;
+            bool hasGzip = false;
 
             foreach (var header in accept)
             {
                 if (header is null)
                     continue;
 
-                if (header.Contains("gzip", StringComparison.OrdinalIgnoreCase))
-                    return ("gzip", ".gz");
+                if (!hasBr && header.Contains("br", StringComparison.OrdinalIgnoreCase))
+                    hasBr = true;
+
+                if (!hasGzip && header.Contains("gzip", StringComparison.OrdinalIgnoreCase))
+                    hasGzip = true;
+
+                if (hasBr)
+                    break;
             }
+
+            if (hasBr)
+                return ("br", ".br");
+
+            if (hasGzip)
+                return ("gzip", ".gz");
 
             return (null, string.Empty);
         }

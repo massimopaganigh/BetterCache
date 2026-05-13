@@ -18,13 +18,9 @@ namespace BetterCache
         }
 
         #region PRIVATE METHODS
-        private static void ApplyHeaders(HttpContext ctx, BetterCacheOptions opts, string immutable)
+        // #8 — path is included in the state tuple so ApplyHeaders reads it once, not twice.
+        private static void ApplyHeaders(HttpContext ctx, BetterCacheOptions opts, string immutable, string path)
         {
-            var path = ctx.Request.Path.Value;
-
-            if (string.IsNullOrEmpty(path))
-                return;
-
             if (path.EndsWith(opts.BootManifestFileName, StringComparison.OrdinalIgnoreCase))
             {
                 ctx.Response.Headers.CacheControl = "no-cache, must-revalidate";
@@ -41,15 +37,17 @@ namespace BetterCache
         {
             var path = context.Request.Path.Value;
 
+            // #8 — path is captured here and forwarded through the state tuple; ApplyHeaders
+            // receives it directly and never re-reads context.Request.Path.Value.
             if (!string.IsNullOrEmpty(path))
                 context.Response.OnStarting(static state =>
                 {
-                    var (ctx, opts, immutable) = ((HttpContext, BetterCacheOptions, string))state;
+                    var (ctx, opts, immutable, p) = ((HttpContext, BetterCacheOptions, string, string))state;
 
-                    ApplyHeaders(ctx, opts, immutable);
+                    ApplyHeaders(ctx, opts, immutable, p);
 
                     return Task.CompletedTask;
-                }, (context, _options, _immutableHeader));
+                }, (context, _options, _immutableHeader, path));
 
             await _next(context);
         }

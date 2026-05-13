@@ -6,6 +6,9 @@ namespace BetterCache.Tasks
     /// </summary>
     public sealed class CompressAssets : Task
     {
+        // #6 — explicit 256 KB I/O buffer for better throughput on large files (e.g. WASM).
+        private const int IoBufferSize = 256 * 1024;
+
         public override bool Execute()
         {
             if (!Directory.Exists(RootDirectory))
@@ -24,24 +27,26 @@ namespace BetterCache.Tasks
                 extensions.Add(trimmed.StartsWith('.') ? trimmed : "." + trimmed);
             }
 
+            // #5 — thread-safe counters for parallel compression.
             int compressedCount = 0;
             long savedBytes = 0;
 
-            foreach (var file in Directory.EnumerateFiles(RootDirectory, "*", SearchOption.AllDirectories))
+            var files = Directory.EnumerateFiles(RootDirectory, "*", SearchOption.AllDirectories)
+                .Where(file =>
+                {
+                    var ext = Path.GetExtension(file);
+
+                    return extensions.Contains(ext)
+                        && !file.EndsWith(".br", StringComparison.OrdinalIgnoreCase)
+                        && !file.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)
+                        && new FileInfo(file).Length >= MinBytes;
+                })
+                .ToList();
+
+            // #5 — compress files in parallel to utilise all available cores.
+            System.Threading.Tasks.Parallel.ForEach(files, file =>
             {
-                var ext = Path.GetExtension(file);
-
-                if (!extensions.Contains(ext))
-                    continue;
-
-                if (file.EndsWith(".br", StringComparison.OrdinalIgnoreCase)
-                    || file.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
                 var info = new FileInfo(file);
-
-                if (info.Length < MinBytes)
-                    continue;
 
                 if (WriteBrotli)
                 {
@@ -51,9 +56,8 @@ namespace BetterCache.Tasks
                     {
                         CompressFile(file, brPath, stream => new BrotliStream(stream, CompressionLevel.SmallestSize));
 
-                        savedBytes += Math.Max(0, info.Length - new FileInfo(brPath).Length);
-
-                        compressedCount++;
+                        Interlocked.Add(ref savedBytes, Math.Max(0, info.Length - new FileInfo(brPath).Length));
+                        Interlocked.Increment(ref compressedCount);
                     }
                 }
 
@@ -64,7 +68,7 @@ namespace BetterCache.Tasks
                     if (IsStale(gzPath, info))
                         CompressFile(file, gzPath, stream => new GZipStream(stream, CompressionLevel.SmallestSize));
                 }
-            }
+            });
 
             Log.LogMessage(MessageImportance.High, $"[BetterCache] Compressed {compressedCount} files, saved ~{savedBytes / 1024} KB.");
 
@@ -83,13 +87,14 @@ namespace BetterCache.Tasks
         public bool WriteGzip { get; set; } = true;
 
         #region PRIVATE METHODS
+        // #6 — 256 KB buffer passed to CopyTo for better I/O throughput.
         private static void CompressFile(string source, string destination, Func<Stream, Stream> wrap)
         {
             using var input = File.OpenRead(source);
             using var output = File.Create(destination);
             using var compressor = wrap(output);
 
-            input.CopyTo(compressor);
+            input.CopyTo(compressor, IoBufferSize);
         }
 
         private static bool IsStale(string outputPath, FileInfo source)

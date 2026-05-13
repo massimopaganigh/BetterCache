@@ -8,6 +8,10 @@ namespace BetterCache
     /// </summary>
     public sealed class BetterCachePreload : ComponentBase
     {
+        // #7 — script is keyed on the boot-manifest path (immutable at runtime) so it is built
+        // only once per unique path and reused for every subsequent render call.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _scriptCache = new();
+
         /// <summary>
         /// Inline script: fetches the boot manifest, then injects a
         /// <c>&lt;link rel="preload" as="fetch" crossorigin="anonymous"&gt;</c> element for
@@ -18,11 +22,12 @@ namespace BetterCache
         /// do not coalesce concurrent fetches on the same URL, so the asset would be
         /// downloaded twice (once for the warm, once for Blazor).
         /// </summary>
-        private static string BuildBootPreloadScript(string bootPath)
-        {
-            var escaped = bootPath.Replace("\"", "\\\"");
+        private static string GetBootPreloadScript(string bootPath) =>
+            _scriptCache.GetOrAdd(bootPath, static path =>
+            {
+                var escaped = path.Replace("\"", "\\\"");
 
-            return $$"""
+                return $$"""
         (function(){
           var url = "{{escaped}}";
           var frameworkBase = url.substring(0, url.lastIndexOf('/') + 1);
@@ -76,7 +81,7 @@ namespace BetterCache
             .catch(function(){});
         })();
         """;
-        }
+            });
 
         #region PRIVATE METHODS
         private static string GuessAs(string path)
@@ -122,7 +127,7 @@ namespace BetterCache
             if (opts.PreloadFrameworkFromBootManifest)
             {
                 builder.OpenElement(10, "script");
-                builder.AddMarkupContent(11, BuildBootPreloadScript(opts.BootManifestPath));
+                builder.AddMarkupContent(11, GetBootPreloadScript(opts.BootManifestPath));
                 builder.CloseElement();
             }
         }
