@@ -18,7 +18,6 @@ namespace BetterCache
         }
 
         #region PRIVATE METHODS
-        // #8 — path is included in the state tuple so ApplyHeaders reads it once, not twice.
         private static void ApplyHeaders(HttpContext ctx, BetterCacheOptions opts, string immutable, string path)
         {
             if (path.EndsWith(opts.BootManifestFileName, StringComparison.OrdinalIgnoreCase))
@@ -37,8 +36,6 @@ namespace BetterCache
         {
             var path = context.Request.Path.Value;
 
-            // #8 — path is captured here and forwarded through the state tuple; ApplyHeaders
-            // receives it directly and never re-reads context.Request.Path.Value.
             if (!string.IsNullOrEmpty(path))
                 context.Response.OnStarting(static state =>
                 {

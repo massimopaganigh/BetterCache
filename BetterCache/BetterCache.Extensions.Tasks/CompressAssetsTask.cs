@@ -6,7 +6,6 @@ namespace BetterCache.Tasks
     /// </summary>
     public sealed class CompressAssets : Task
     {
-        // #6 — explicit 256 KB I/O buffer for better throughput on large files (e.g. WASM).
         private const int IoBufferSize = 256 * 1024;
 
         public override bool Execute()
@@ -27,7 +26,6 @@ namespace BetterCache.Tasks
                 extensions.Add(trimmed.StartsWith('.') ? trimmed : "." + trimmed);
             }
 
-            // #5 — thread-safe counters for parallel compression.
             int compressedCount = 0;
             long savedBytes = 0;
 
@@ -44,7 +42,6 @@ namespace BetterCache.Tasks
                 })
                 .ToList();
 
-            // #5 — compress files in parallel to utilise all available cores.
             System.Threading.Tasks.Parallel.ForEach(files, t =>
             {
                 var (file, info) = t;
@@ -88,7 +85,6 @@ namespace BetterCache.Tasks
         public bool WriteGzip { get; set; } = true;
 
         #region PRIVATE METHODS
-        // #6 — 256 KB buffer passed to CopyTo for better I/O throughput.
         private static void CompressFile(string source, string destination, Func<Stream, Stream> wrap)
         {
             using var input = File.OpenRead(source);
