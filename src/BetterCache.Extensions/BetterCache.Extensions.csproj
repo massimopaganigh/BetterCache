@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>BetterCache</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <IsPackable>true</IsPackable>
+    <PackageId>BetterCache.Extensions</PackageId>
+    <Version>2026.2.0</Version>
+    <Authors>BetterCache</Authors>
+    <Description>Brings .NET 10 Blazor caching behavior to .NET 9: HTTP-cached WebAssembly resources, server-side preload hints, configurable Cache-Control rules and pre-compressed static files.</Description>
+    <PackageTags>blazor;webassembly;cache;cache-control;preload;brotli;performance</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/massimopaganigh/BetterCache</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/massimopaganigh/BetterCache</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="BetterCache.Extensions.Tests" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

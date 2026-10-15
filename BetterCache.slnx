@@ -1,6 +1,12 @@
 <Solution>
-  <Project Path="BetterCache/BetterCache.Client/BetterCache.Client.csproj" />
-  <Project Path="BetterCache/BetterCache/BetterCache.csproj" />
-  <Project Path="BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj" />
-  <Project Path="BetterCache/BetterCache.Extensions.Tasks/BetterCache.Extensions.Tasks.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/BetterCache.Extensions/BetterCache.Extensions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BetterCache.Extensions.Tests/BetterCache.Extensions.Tests.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/BetterCache.Sample.Client/BetterCache.Sample.Client.csproj" />
+    <Project Path="samples/BetterCache.Sample/BetterCache.Sample.csproj" />
+  </Folder>
 </Solution>

@@ -1,0 +1,40 @@
+@* Place inside <head>, after <base href>. Renders the WebAssembly runtime config read by the JS initializer and the preload links. *@
+@using System.Text.Json
+@inject IOptions<BetterCacheOptions> OptionsAccessor
+@inject IEnumerable<IPreloadLinkSource> Sources
+@inject BootManifestProvider BootManifest
+
+@if (runtimeConfig is not null)
+{
+    <meta name="better-cache-webassembly-config" content="@runtimeConfig" />
+}
+@foreach (var link in links)
+{
+    <link rel="@link.Rel" href="@link.Href" as="@link.As" crossorigin="@link.CrossOrigin" integrity="@link.Integrity" type="@link.Type" fetchpriority="@link.FetchPriority" />
+}
+
+@code {
+    private IReadOnlyList<PreloadLink> links = [];
+    private string? runtimeConfig;
+
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var options = OptionsAccessor.Value;
+
+        if (options.WebAssembly.UseHttpCache && BootManifest.Manifest is not null)
+            runtimeConfig = CreateRuntimeConfig(options.WebAssembly);
+
+        if (options.Preload.Enabled && HttpContext is { } context)
+            links = Sources.SelectMany(source => source.GetLinks(context)).DistinctBy(link => link.Href).ToArray();
+    }
+
+    // disableNoCacheFetch: let fetches honor Cache-Control instead of forcing a revalidation round trip per file.
+    internal static string CreateRuntimeConfig(WebAssemblyCacheOptions options) => JsonSerializer.Serialize(new
+    {
+        dotnetJs = options.FrameworkDirectory + "dotnet.js",
+        config = new { disableNoCacheFetch = true },
+    });
+}

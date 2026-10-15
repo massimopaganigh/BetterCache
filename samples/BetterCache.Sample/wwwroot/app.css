@@ -1,0 +1,4 @@
+body { font-family: system-ui, sans-serif; margin: 2rem; }
+nav { margin-bottom: 1rem; }
+#blazor-error-ui { display: none; background: lightyellow; bottom: 0; left: 0; padding: .6rem 1.25rem; position: fixed; width: 100%; }
+#blazor-error-ui .dismiss { cursor: pointer; position: absolute; right: .75rem; top: .5rem; }

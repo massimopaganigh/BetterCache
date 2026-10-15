@@ -19,18 +19,13 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: 9.0.x
 
-      - name: Restore
-        run: dotnet restore BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj
-
-      - name: Build
-        run: dotnet build BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj --configuration Release --no-restore
+      - name: Test
+        run: dotnet test tests/BetterCache.Extensions.Tests/BetterCache.Extensions.Tests.csproj --configuration Release
 
       - name: Pack
-        run: dotnet pack BetterCache/BetterCache.Extensions/BetterCache.Extensions.csproj --configuration Release --no-build --output ./artifacts
+        run: dotnet pack src/BetterCache.Extensions/BetterCache.Extensions.csproj --configuration Release --output ./artifacts
 
       - name: Push to nuget.org
         run: |

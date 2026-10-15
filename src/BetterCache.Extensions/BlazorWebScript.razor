@@ -1,0 +1,14 @@
+@* Drop-in replacement for <script src="_framework/blazor.web.js"></script>: same file, fingerprinted immutable URL. *@
+@inject IOptions<BetterCacheOptions> OptionsAccessor
+@inject BlazorWebScriptAsset Script
+
+<script src="@Source" @attributes="AdditionalAttributes"></script>
+
+@code {
+    /// <summary>Extra attributes for the script element, for example <c>autostart="false"</c>.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    // Relative, like the template's tag, so it resolves against <base href>.
+    private string Source => (OptionsAccessor.Value.BlazorScript.Enabled ? Script.FingerprintedPath : BlazorWebScriptAsset.Path).TrimStart('/');
+}
